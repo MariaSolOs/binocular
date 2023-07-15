@@ -1,0 +1,13 @@
+[package]
+name = "binocular"
+authors = ["Maria José Solano <majosolano99@gmail.com>"]
+description = "Binocular vision for your terminal"
+version = "0.0.0"
+edition = "2021"
+repository = "https://github.com/MariaSolOs/binocular"
+license = "Apache-2.0"
+readme = "README.md"
+keywords = ["regex", "search", "pattern"]
+categories = ["command-line-utilities", "filesystem"]
+
+[dependencies]
