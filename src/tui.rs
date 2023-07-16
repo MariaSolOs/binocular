@@ -21,10 +21,9 @@ impl Tui {
             .context("failed to enter alternate screen")?;
 
         // Initialize the terminal.
-        let terminal =
-            Terminal::new(CrosstermBackend::new(stdout)).context("failed to create terminal")?;
-
-        Ok(Self { terminal })
+        Terminal::new(CrosstermBackend::new(stdout))
+            .map(|terminal| Self { terminal })
+            .context("failed to create terminal")
     }
 
     pub fn shutdown(&mut self) -> Result<()> {
@@ -33,8 +32,8 @@ impl Tui {
 
         // Restore terminal properties.
         crossterm::execute!(self.terminal.backend_mut(), terminal::LeaveAlternateScreen)
-            .context("failed to leave alternate screen")?;
+            .context("failed to leave alternate screen")
+    }
 
-        Ok(())
     }
 }
