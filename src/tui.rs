@@ -20,26 +20,34 @@ impl Tui {
     /// Sets up the terminal user interface.
     pub fn setup() -> Result<Self> {
         // Enable raw mode.
-        terminal::enable_raw_mode().context("failed to enable raw mode")?;
+        terminal::enable_raw_mode().context("Failed to enable raw mode")?;
 
         // Configure terminal properties.
         let mut stdout = std::io::stdout();
         crossterm::execute!(stdout, terminal::EnterAlternateScreen)
-            .context("failed to enter alternate screen")?;
+            .context("Failed to enter alternate screen")?;
 
         // Initialize the terminal.
         Terminal::new(CrosstermBackend::new(stdout))
             .map(|terminal| Self { terminal })
-            .context("failed to create terminal")
+            .context("Failed to create terminal")
     }
 
-    pub fn shutdown(&mut self) -> Result<()> {
+    /// Shuts down the terminal user interface.
+    /// Note that this function won't stop when encountering an error,
+    /// instead it will print the error to `stderr` and continue.
+    pub fn shutdown(&mut self) {
         // Disable raw mode.
-        terminal::disable_raw_mode().context("failed to disable raw mode")?;
+        if let Err(err) = terminal::disable_raw_mode() {
+            eprintln!("Failed to disable raw mode: {}", err);
+        }
 
         // Restore terminal properties.
-        crossterm::execute!(self.terminal.backend_mut(), terminal::LeaveAlternateScreen)
-            .context("failed to leave alternate screen")
+        if let Err(err) =
+            crossterm::execute!(self.terminal.backend_mut(), terminal::LeaveAlternateScreen)
+        {
+            eprintln!("Failed to leave alternate screen: {}", err);
+        }
     }
 
     /// Renders the terminal's widgets.
@@ -85,6 +93,6 @@ impl Tui {
                 );
             })
             .map(|_| ())
-            .context("failed to draw terminal")
+            .context("Failed to draw terminal")
     }
 }

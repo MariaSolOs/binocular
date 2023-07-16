@@ -24,15 +24,16 @@ impl App {
 
         loop {
             tui.render(&self.input)
-                .context("failed to render application window")?;
+                .context("Failed to render application window")?;
 
-            if event::poll(timeout).context("failed to poll next terminal event")? {
-                if let Event::Key(key) = event::read().context("failed to read terminal event")? {
+            if event::poll(timeout).context("Failed to poll next terminal event")? {
+                if let Event::Key(key) = event::read().context("Failed to read terminal event")? {
                     match key.code {
                         // Exit the application.
                         KeyCode::Esc => return Ok(()),
                         _ => {
                             self.input.handle_event(&Event::Key(key));
+                            self.execute_rg().context("Failed to run ripgrep")?;
                         }
                     }
                 }

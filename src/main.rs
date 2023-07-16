@@ -4,12 +4,14 @@ use binocular::{app::App, tui::Tui};
 
 fn main() -> Result<()> {
     // Initialize the application.
-    let mut tui = Tui::setup().context("failed to setup terminal")?;
+    let mut tui = Tui::setup().context("Failed to setup terminal")?;
     let mut app = App::new();
 
     // Application loop.
-    app.run(&mut tui).context("failed to run the application")?;
+    let res = app.run(&mut tui).context("Failed to run the application");
 
     // Cleanup.
-    tui.shutdown().context("failed to shutdown terminal")
+    tui.shutdown();
+
+    res
 }
