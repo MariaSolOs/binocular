@@ -1,7 +1,14 @@
 use anyhow::{Context, Result};
 use crossterm::terminal;
-use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders, Paragraph},
+    Terminal,
+};
 use std::io::Stdout;
+use tui_input::Input;
 
 /// Wrapper around the terminal user interface.
 /// Responsible for its setup and shutdown.
@@ -35,5 +42,49 @@ impl Tui {
             .context("failed to leave alternate screen")
     }
 
+    /// Renders the terminal's widgets.
+    pub fn render(&mut self, input: &Input) -> Result<()> {
+        fn block(title: &str) -> Block {
+            Block::default()
+                .title(title)
+                .title_alignment(Alignment::Center)
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .border_style(Style::default().fg(Color::LightCyan))
+        }
+
+        self.terminal
+            .draw(|f| {
+                // Define the layout.
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(
+                        [
+                            Constraint::Percentage(40),
+                            Constraint::Percentage(53),
+                            Constraint::Percentage(7),
+                        ]
+                        .as_ref(),
+                    )
+                    .margin(1)
+                    .split(f.size());
+
+                f.render_widget(block("Preview"), chunks[0]);
+                f.render_widget(block("Results"), chunks[1]);
+                f.render_widget(
+                    Paragraph::new(input.value()).block(block("Input")),
+                    chunks[2],
+                );
+
+                // Keep the cursor in sync with the input field.
+                let width = chunks[0].width - 2;
+                let scroll = input.visual_scroll(width as usize);
+                f.set_cursor(
+                    chunks[2].x + ((input.visual_cursor()).max(scroll) - scroll) as u16 + 1,
+                    chunks[2].y + 1,
+                );
+            })
+            .map(|_| ())
+            .context("failed to draw terminal")
     }
 }
