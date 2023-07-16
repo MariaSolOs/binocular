@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::event::{self, Event, KeyCode};
 use tui_input::{backend::crossterm::EventHandler, Input};
 
@@ -23,11 +23,13 @@ impl App {
         let timeout = Duration::from_millis(250);
 
         loop {
-            tui.render(&self.input)?;
+            tui.render(&self.input)
+                .context("failed to render application window")?;
 
-            if event::poll(timeout)? {
-                if let Event::Key(key) = event::read()? {
+            if event::poll(timeout).context("failed to poll next terminal event")? {
+                if let Event::Key(key) = event::read().context("failed to read terminal event")? {
                     match key.code {
+                        // Exit the application.
                         KeyCode::Esc => return Ok(()),
                         _ => {
                             self.input.handle_event(&Event::Key(key));

@@ -8,7 +8,7 @@ fn main() -> Result<()> {
     let mut app = App::new();
 
     // Application loop.
-    app.run(&mut tui)?;
+    app.run(&mut tui).context("failed to run the application")?;
 
     // Cleanup.
     tui.shutdown().context("failed to shutdown terminal")
