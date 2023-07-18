@@ -86,7 +86,7 @@ impl App {
                 // Parse each item, keeping track of the context lines around each match.
                 let mut file = output
                     .next()
-                    .expect("first output line should be a file name");
+                    .context("first output line should be a file name")?;
                 let mut ctx = HashMap::with_capacity(8);
                 let mut builder: Option<RgItemBuilder> = None;
                 self.results.clear();
@@ -100,10 +100,10 @@ impl App {
                             Some(c @ ('-' | ':')) => {
                                 let (line_number, line) = output_line
                                     .split_once(c)
-                                    .expect("the output line should contain the matched character");
+                                    .context("output line should contain the matched character")?;
                                 let line_number = line_number
                                     .parse::<u16>()
-                                    .expect("the output line should start with digits");
+                                    .context("output line should start with digits")?;
 
                                 if c == '-' {
                                     // We have a context line.
