@@ -4,7 +4,7 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
     Terminal,
 };
 use std::io::Stdout;
@@ -51,7 +51,7 @@ impl Tui {
     }
 
     /// Renders the terminal's widgets.
-    pub fn render(&mut self, input: &Input) -> Result<()> {
+    pub fn render(&mut self, input: &Input, results: Vec<ListItem>) -> Result<()> {
         fn block(title: &str) -> Block {
             Block::default()
                 .title(title)
@@ -78,7 +78,9 @@ impl Tui {
                     .split(f.size());
 
                 f.render_widget(block("Preview"), chunks[0]);
-                f.render_widget(block("Results"), chunks[1]);
+
+                f.render_widget(List::new(results).block(block("Results")), chunks[1]);
+
                 f.render_widget(
                     Paragraph::new(input.value()).block(block("Input")),
                     chunks[2],
