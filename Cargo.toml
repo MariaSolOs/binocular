@@ -13,5 +13,5 @@ categories = ["command-line-utilities", "filesystem"]
 [dependencies]
 anyhow = "1.0.72"
 crossterm = "0.26.1"
-ratatui = "0.21.0"
+ratatui = "0.22.0"
 tui-input = "0.7.1"
