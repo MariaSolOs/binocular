@@ -73,7 +73,7 @@ impl App {
         {
             Err(err) => {
                 if err.kind() == ErrorKind::NotFound {
-                    bail!("rigrep is not installed")
+                    bail!("ripgrep is not installed")
                 } else {
                     bail!("Failed to run ripgrep: {}", err)
                 }
