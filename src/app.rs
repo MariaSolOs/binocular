@@ -127,10 +127,10 @@ impl App {
                                     .parse::<u16>()
                                     .context("output line should start with digits")?;
 
-                                if c == '-' {
-                                    // We have a context line.
-                                    ctx.insert(line_number, line);
-                                } else {
+                                // Add the line to the context.
+                                ctx.insert(line_number, line);
+
+                                if c == ':' {
                                     // We have a match.
                                     if let Some(builder) = builder {
                                         // The current context is the post-context for the previous item
