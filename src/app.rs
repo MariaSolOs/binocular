@@ -39,11 +39,7 @@ impl App {
                     .into_iter()
                     .map(RgItem::into_list_item)
                     .collect(),
-                if self.results.is_empty() {
-                    ""
-                } else {
-                    self.results[self.state.selected().unwrap_or(0)].context()
-                },
+                &{ self.selected_item().map_or("", |item| item.context()) }.to_string(),
                 &mut self.state,
             )
             .context("Failed to render application window")?;
@@ -70,6 +66,15 @@ impl App {
                                     i + 1
                                 }
                             })));
+                        }
+                        KeyCode::Enter => {
+                            if let Some(item) = self.selected_item() {
+                                Command::new("code-insiders")
+                                    .arg("--goto")
+                                    .arg(format!("{}:{}", item.filename(), item.line_number()))
+                                    .spawn()
+                                    .context("Failed to open file in VS Code")?;
+                            }
                         }
                         _ => {
                             self.input.handle_event(&Event::Key(key));
@@ -185,5 +190,13 @@ impl App {
         } else {
             Some(0)
         });
+    }
+
+    fn selected_item(&self) -> Option<&RgItem> {
+        if self.results.is_empty() {
+            None
+        } else {
+            Some(&self.results[self.state.selected().unwrap_or(0)])
+        }
     }
 }

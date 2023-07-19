@@ -32,6 +32,14 @@ impl RgItem {
         }
     }
 
+    pub(crate) fn line_number(&self) -> u16 {
+        self.line_number
+    }
+
+    pub(crate) fn filename(&self) -> &str {
+        &self.filename
+    }
+
     pub(crate) fn context(&self) -> &str {
         &self.context
     }
