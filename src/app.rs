@@ -39,6 +39,11 @@ impl App {
                     .into_iter()
                     .map(RgItem::into_list_item)
                     .collect(),
+                if self.results.is_empty() {
+                    ""
+                } else {
+                    self.results[self.state.selected().unwrap_or(0)].context()
+                },
                 &mut self.state,
             )
             .context("Failed to render application window")?;

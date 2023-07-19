@@ -3,7 +3,7 @@ use crossterm::terminal;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
@@ -55,6 +55,7 @@ impl Tui {
         &mut self,
         input: &Input,
         results: Vec<ListItem>,
+        preview: &str,
         state: &mut ListState,
     ) -> Result<()> {
         fn block(title: &str) -> Block {
@@ -73,16 +74,16 @@ impl Tui {
                     .direction(Direction::Vertical)
                     .constraints(
                         [
-                            Constraint::Percentage(40),
-                            Constraint::Percentage(53),
-                            Constraint::Percentage(7),
+                            Constraint::Length(10),
+                            Constraint::Min(20),
+                            Constraint::Length(3),
                         ]
                         .as_ref(),
                     )
                     .margin(1)
                     .split(f.size());
 
-                f.render_widget(block("Preview"), chunks[0]);
+                f.render_widget(Paragraph::new(preview).block(block("Preview")), chunks[0]);
 
                 f.render_stateful_widget(
                     List::new(results)

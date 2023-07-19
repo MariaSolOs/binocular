@@ -1,5 +1,5 @@
 use ratatui::{
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::ListItem,
 };
@@ -30,6 +30,10 @@ impl RgItem {
             pre_context: Vec::with_capacity(CTX_LINES.into()),
             post_context: Vec::with_capacity(CTX_LINES.into()),
         }
+    }
+
+    pub(crate) fn context(&self) -> &str {
+        &self.context
     }
 
     pub fn into_list_item(self) -> ListItem<'static> {
