@@ -1,5 +1,5 @@
 use ratatui::{
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::ListItem,
 };
@@ -34,7 +34,11 @@ impl RgItem {
 
     pub fn into_list_item(self) -> ListItem<'static> {
         ListItem::new(vec![Line::from(vec![
-            Span::styled(self.filename, Style::default().fg(Color::Magenta)),
+            Span::styled(self.filename, Style::default().fg(Color::LightMagenta)),
+            Span::styled(
+                format!(" [{}]", self.line_number),
+                Style::default().fg(Color::LightMagenta),
+            ),
             Span::raw(self.matched_line),
         ])])
     }
