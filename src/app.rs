@@ -69,7 +69,7 @@ impl App {
                         }
                         KeyCode::Enter => {
                             if let Some(item) = self.selected_item() {
-                                Command::new("code-insiders")
+                                Command::new(if cfg!(windows) { "code-insiders.cmd" } else { "code-insiders" })
                                     .arg("--goto")
                                     .arg(format!("{}:{}", item.filename(), item.line_number()))
                                     .spawn()
@@ -93,7 +93,7 @@ impl App {
             return Ok(());
         }
 
-        match Command::new("rg")
+        match Command::new(if cfg!(windows) { "rg.exe" } else { "rg" })
             .arg(self.input.value())
             .arg("--color=never")
             .arg("--heading")
