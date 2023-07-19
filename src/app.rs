@@ -1,5 +1,6 @@
 use anyhow::{bail, Context, Result};
 use crossterm::event::{self, Event, KeyCode};
+use ratatui::widgets::ListState;
 use std::{collections::HashMap, io::ErrorKind, process::Command, time::Duration};
 use tui_input::{backend::crossterm::EventHandler, Input};
 
@@ -15,6 +16,7 @@ const TIMEOUT: u64 = 250;
 pub struct App {
     input: Input,
     results: Vec<RgItem>,
+    state: ListState,
 }
 
 impl App {
@@ -22,6 +24,7 @@ impl App {
         Self {
             input: Input::default(),
             results: Vec::new(),
+            state: ListState::default(),
         }
     }
 
@@ -36,6 +39,7 @@ impl App {
                     .into_iter()
                     .map(RgItem::into_list_item)
                     .collect(),
+                &mut self.state,
             )
             .context("Failed to render application window")?;
 
@@ -44,9 +48,33 @@ impl App {
                     match key.code {
                         // Exit the application.
                         KeyCode::Esc => return Ok(()),
+                        KeyCode::Up => {
+                            self.state.select(Some(match self.state.selected() {
+                                Some(i) => {
+                                    if i == 0 {
+                                        self.results.len() - 1
+                                    } else {
+                                        i - 1
+                                    }
+                                }
+                                None => 0,
+                            }));
+                        }
+                        KeyCode::Down => {
+                            self.state.select(Some(match self.state.selected() {
+                                Some(i) => {
+                                    if i >= self.results.len() - 1 {
+                                        0
+                                    } else {
+                                        i + 1
+                                    }
+                                }
+                                None => 0,
+                            }));
+                        }
                         _ => {
                             self.input.handle_event(&Event::Key(key));
-                            self.execute_rg()?;
+                            self.execute_rg().context("Failed to execute ripgrep")?;
                         }
                     }
                 }
@@ -57,7 +85,7 @@ impl App {
     fn execute_rg(&mut self) -> Result<()> {
         if self.input.value().is_empty() {
             // Easy case. Just clear the results.
-            self.results.clear();
+            self.set_results(Vec::new());
             return Ok(());
         }
 
@@ -89,7 +117,7 @@ impl App {
                     .context("first output line should be a file name")?;
                 let mut ctx = HashMap::with_capacity(8);
                 let mut builder: Option<RgItemBuilder> = None;
-                self.results.clear();
+                let mut results = Vec::new();
                 for output_line in output {
                     if output_line.starts_with(|c: char| c.is_ascii_digit()) {
                         match output_line
@@ -113,7 +141,7 @@ impl App {
                                     if let Some(builder) = builder {
                                         // The current context is the post-context for the previous item
                                         // (if any).
-                                        self.results.push(builder.add_post_context(&ctx).build());
+                                        results.push(builder.add_post_context(&ctx).build());
                                     }
 
                                     // The current context is the pre-context for this item.
@@ -139,11 +167,24 @@ impl App {
 
                 // Add the last item.
                 if let Some(builder) = builder {
-                    self.results.push(builder.add_post_context(&ctx).build());
+                    results.push(builder.add_post_context(&ctx).build());
                 }
+
+                // Update the current results.
+                self.set_results(results);
             }
         }
 
         Ok(())
+    }
+
+    fn set_results(&mut self, results: Vec<RgItem>) {
+        self.results = results;
+        // Reset the stored offset.
+        self.state = ListState::default().with_selected(if self.results.is_empty() {
+            None
+        } else {
+            Some(0)
+        });
     }
 }

@@ -3,8 +3,8 @@ use crossterm::terminal;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, BorderType, Borders, List, ListItem, Paragraph},
+    style::{Color, Modifier, Style},
+    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 use std::io::Stdout;
@@ -51,7 +51,12 @@ impl Tui {
     }
 
     /// Renders the terminal's widgets.
-    pub fn render(&mut self, input: &Input, results: Vec<ListItem>) -> Result<()> {
+    pub fn render(
+        &mut self,
+        input: &Input,
+        results: Vec<ListItem>,
+        state: &mut ListState,
+    ) -> Result<()> {
         fn block(title: &str) -> Block {
             Block::default()
                 .title(title)
@@ -79,7 +84,14 @@ impl Tui {
 
                 f.render_widget(block("Preview"), chunks[0]);
 
-                f.render_widget(List::new(results).block(block("Results")), chunks[1]);
+                f.render_stateful_widget(
+                    List::new(results)
+                        .block(block("Results"))
+                        .highlight_symbol(">> ")
+                        .highlight_style(Style::default().fg(Color::Yellow)),
+                    chunks[1],
+                    state,
+                );
 
                 f.render_widget(
                     Paragraph::new(input.value()).block(block("Input")),
