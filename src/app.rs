@@ -49,28 +49,22 @@ impl App {
                         // Exit the application.
                         KeyCode::Esc => return Ok(()),
                         KeyCode::Up => {
-                            self.state.select(Some(match self.state.selected() {
-                                Some(i) => {
-                                    if i == 0 {
-                                        self.results.len() - 1
-                                    } else {
-                                        i - 1
-                                    }
+                            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                                if i == 0 {
+                                    self.results.len() - 1
+                                } else {
+                                    i - 1
                                 }
-                                None => 0,
-                            }));
+                            })));
                         }
                         KeyCode::Down => {
-                            self.state.select(Some(match self.state.selected() {
-                                Some(i) => {
-                                    if i >= self.results.len() - 1 {
-                                        0
-                                    } else {
-                                        i + 1
-                                    }
+                            self.state.select(Some(self.state.selected().map_or(0, |i| {
+                                if i >= self.results.len() - 1 {
+                                    0
+                                } else {
+                                    i + 1
                                 }
-                                None => 0,
-                            }));
+                            })));
                         }
                         _ => {
                             self.input.handle_event(&Event::Key(key));
