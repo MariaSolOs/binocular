@@ -51,7 +51,7 @@ impl Tui {
     }
 
     /// Renders the terminal's widgets.
-    pub fn render(
+    pub(crate) fn render(
         &mut self,
         input: &Input,
         results: Vec<ListItem>,

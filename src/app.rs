@@ -9,10 +9,11 @@ use crate::{
     tui::Tui,
 };
 
-// TODO: Document.
-
+/// Event polling timeout in milliseconds.
 const TIMEOUT: u64 = 250;
 
+/// The application state. Abstraction over what's displayed
+/// in the TUI.
 pub struct App {
     input: Input,
     results: Vec<RgItem>,
@@ -20,6 +21,7 @@ pub struct App {
 }
 
 impl App {
+    /// Initializes a new application.
     pub fn new() -> Self {
         Self {
             input: Input::default(),
@@ -28,27 +30,27 @@ impl App {
         }
     }
 
+    /// Runs the application loop.
     pub fn run(&mut self, tui: &mut Tui) -> Result<()> {
         let timeout = Duration::from_millis(TIMEOUT);
 
         loop {
+            // Render the terminal UI.
             tui.render(
                 &self.input,
-                self.results
-                    .clone()
-                    .into_iter()
-                    .map(RgItem::into_list_item)
-                    .collect(),
+                self.results.iter().map(RgItem::as_list_item).collect(),
                 &{ self.selected_item().map_or("", |item| item.context()) }.to_string(),
                 &mut self.state,
             )
             .context("Failed to render application window")?;
 
+            // Check if we received any user input.
             if event::poll(timeout).context("Failed to poll next terminal event")? {
                 if let Event::Key(key) = event::read().context("Failed to read terminal event")? {
                     match key.code {
                         // Exit the application.
                         KeyCode::Esc => return Ok(()),
+                        // Select the previous item from the results list.
                         KeyCode::Up => {
                             self.state.select(Some(self.state.selected().map_or(0, |i| {
                                 if i == 0 {
@@ -58,6 +60,7 @@ impl App {
                                 }
                             })));
                         }
+                        // Select the next item from the results list.
                         KeyCode::Down => {
                             self.state.select(Some(self.state.selected().map_or(0, |i| {
                                 if i >= self.results.len() - 1 {
@@ -68,14 +71,20 @@ impl App {
                             })));
                         }
                         KeyCode::Enter => {
+                            // Open the selected item in VS Code.
                             if let Some(item) = self.selected_item() {
-                                Command::new(if cfg!(windows) { "code-insiders.cmd" } else { "code-insiders" })
-                                    .arg("--goto")
-                                    .arg(format!("{}:{}", item.filename(), item.line_number()))
-                                    .spawn()
-                                    .context("Failed to open file in VS Code")?;
+                                Command::new(if cfg!(windows) {
+                                    "code-insiders.cmd"
+                                } else {
+                                    "code-insiders"
+                                })
+                                .arg("--goto")
+                                .arg(format!("{}:{}", item.filename(), item.line_number()))
+                                .spawn()
+                                .context("Failed to open file in VS Code")?;
                             }
                         }
+                        // Handle any other key event as search input.
                         _ => {
                             self.input.handle_event(&Event::Key(key));
                             self.execute_rg().context("Failed to execute ripgrep")?;
@@ -86,6 +95,7 @@ impl App {
         }
     }
 
+    // Executes `ripgrep` with the current search input.
     fn execute_rg(&mut self) -> Result<()> {
         if self.input.value().is_empty() {
             // Easy case. Just clear the results.
@@ -155,6 +165,8 @@ impl App {
                                     );
                                 }
                             }
+                            // This is technically impossible because we're matching ripgrep's
+                            // format, but we'll handle it anyway.
                             _ => bail!(
                                 "expected a context or a matching line but found: {}",
                                 output_line
@@ -184,7 +196,7 @@ impl App {
 
     fn set_results(&mut self, results: Vec<RgItem>) {
         self.results = results;
-        // Reset the stored offset.
+        // Reset the stored list offset.
         self.state = ListState::default().with_selected(if self.results.is_empty() {
             None
         } else {

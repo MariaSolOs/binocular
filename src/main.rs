@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 
-use binocular::{app::App, tui::Tui};
+use binocular::{App, Tui};
 
 fn main() -> Result<()> {
     // Initialize the application.

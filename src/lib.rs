@@ -1,8 +1,10 @@
 /// Application.
-pub mod app;
+mod app;
+pub use app::App;
 
 /// List item representing a `ripgrep` result.
-pub mod rg_item;
+mod rg_item;
 
 /// Terminal user interface.
-pub mod tui;
+mod tui;
+pub use tui::Tui;

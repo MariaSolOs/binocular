@@ -5,12 +5,12 @@ use ratatui::{
 };
 use std::{collections::HashMap, iter};
 
-// TODO: Document.
-
+/// Number of context lines kept before and after a matched line.
 pub(crate) const CTX_LINES: u16 = 4;
 
+/// A match returned by `ripgrep`.
 #[derive(Clone)]
-pub struct RgItem {
+pub(crate) struct RgItem {
     filename: String,
     line_number: u16,
     matched_line: String,
@@ -18,7 +18,8 @@ pub struct RgItem {
 }
 
 impl RgItem {
-    pub fn builder(
+    /// Creates a new `ripgrep` item builder.
+    pub(crate) fn builder(
         filename: impl Into<String>,
         line_number: u16,
         matched_line: impl Into<String>,
@@ -32,31 +33,36 @@ impl RgItem {
         }
     }
 
+    /// Returns the line number of the match.
     pub(crate) fn line_number(&self) -> u16 {
         self.line_number
     }
 
+    /// Returns the file name of the match.
     pub(crate) fn filename(&self) -> &str {
         &self.filename
     }
 
+    /// Returns the matched line together with its surrounding context.
     pub(crate) fn context(&self) -> &str {
         &self.context
     }
 
-    pub fn into_list_item(self) -> ListItem<'static> {
+    /// Returns a list item representing the match.
+    pub fn as_list_item(&self) -> ListItem {
         ListItem::new(vec![Line::from(vec![
-            Span::styled(self.filename, Style::default().fg(Color::LightMagenta)),
+            Span::styled(&self.filename, Style::default().fg(Color::LightMagenta)),
             Span::styled(
                 format!(" [{}]", self.line_number),
                 Style::default().fg(Color::LightMagenta),
             ),
-            Span::raw(self.matched_line),
+            Span::raw(&self.matched_line),
         ])])
     }
 }
 
-pub struct RgItemBuilder {
+/// A builder for [RgItem]s.
+pub(crate) struct RgItemBuilder {
     filename: String,
     line_number: u16,
     matched_line: String,
@@ -65,7 +71,8 @@ pub struct RgItemBuilder {
 }
 
 impl RgItemBuilder {
-    pub fn add_pre_context(mut self, ctx: &HashMap<u16, &str>) -> Self {
+    /// Adds context before the matched line to the [RgItem].
+    pub(crate) fn add_pre_context(mut self, ctx: &HashMap<u16, &str>) -> Self {
         for line in self.line_number.saturating_sub(CTX_LINES)..self.line_number {
             if let Some(ctx_line) = ctx.get(&line) {
                 self.pre_context.push(ctx_line.to_string());
@@ -75,7 +82,8 @@ impl RgItemBuilder {
         self
     }
 
-    pub fn add_post_context(mut self, ctx: &HashMap<u16, &str>) -> Self {
+    /// Adds context after the matched line to the [RgItem].
+    pub(crate) fn add_post_context(mut self, ctx: &HashMap<u16, &str>) -> Self {
         for line in self.line_number + 1..=self.line_number + CTX_LINES {
             if let Some(ctx_line) = ctx.get(&line) {
                 self.post_context.push(ctx_line.to_string());
@@ -85,7 +93,8 @@ impl RgItemBuilder {
         self
     }
 
-    pub fn build(self) -> RgItem {
+    /// Builds the [RgItem].
+    pub(crate) fn build(self) -> RgItem {
         let context = self
             .pre_context
             .into_iter()
