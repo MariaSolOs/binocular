@@ -48,13 +48,14 @@ impl App {
             .context("Failed to render application window")?;
 
             // Check if we received any user input.
+            // Note that only some actions are enabled when showing the help dialog.
             if event::poll(timeout).context("Failed to poll next terminal event")? {
                 if let Event::Key(key) = event::read().context("Failed to read terminal event")? {
-                    match key.code {
+                    match (key.code, self.show_help) {
                         // Exit the application.
-                        KeyCode::Esc => return Ok(()),
+                        (KeyCode::Esc, _) => return Ok(()),
                         // Select the previous item from the results list.
-                        KeyCode::Up => {
+                        (KeyCode::Up, false) => {
                             self.state.select(Some(self.state.selected().map_or(0, |i| {
                                 if i == 0 {
                                     self.results.len() - 1
@@ -64,7 +65,7 @@ impl App {
                             })));
                         }
                         // Select the next item from the results list.
-                        KeyCode::Down => {
+                        (KeyCode::Down, false) => {
                             self.state.select(Some(self.state.selected().map_or(0, |i| {
                                 if i >= self.results.len() - 1 {
                                     0
@@ -73,7 +74,7 @@ impl App {
                                 }
                             })));
                         }
-                        KeyCode::Enter => {
+                        (KeyCode::Enter, false) => {
                             // Open the selected item in VS Code.
                             if let Some(item) = self.selected_item() {
                                 Command::new(if cfg!(windows) {
@@ -87,14 +88,16 @@ impl App {
                                 .context("Failed to open file in VS Code")?;
                             }
                         }
-                        KeyCode::Char('?') => {
+                        (KeyCode::Char('?'), _) => {
                             // Toggle the help window.
                             self.show_help = !self.show_help;
                         }
                         // Handle any other key event as search input.
-                        _ => {
-                            self.input.handle_event(&Event::Key(key));
-                            self.execute_rg().context("Failed to execute ripgrep")?;
+                        (_, show_help) => {
+                            if !show_help {
+                                self.input.handle_event(&Event::Key(key));
+                                self.execute_rg().context("Failed to execute ripgrep")?;
+                            }
                         }
                     }
                 }
