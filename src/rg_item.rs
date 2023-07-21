@@ -9,7 +9,6 @@ use std::{collections::HashMap, iter};
 pub(crate) const CTX_LINES: u16 = 4;
 
 /// A match returned by `ripgrep`.
-#[derive(Clone)]
 pub(crate) struct RgItem {
     filename: String,
     line_number: u16,

@@ -3,12 +3,18 @@ use crossterm::terminal;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Style},
-    widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, ListState, Paragraph},
     Terminal,
 };
 use std::io::Stdout;
 use tui_input::Input;
+
+/// Percentage of the horizontal space occupied by the help window.
+const HELP_PERCENT_X: u16 = 20;
+/// Percentage of the vertical space occupied by the help window.
+const HELP_PERCENT_Y: u16 = 20;
 
 /// Wrapper around the terminal user interface.
 /// Responsible for its setup and shutdown.
@@ -57,6 +63,7 @@ impl Tui {
         results: Vec<ListItem>,
         preview: &str,
         state: &mut ListState,
+        show_help: bool,
     ) -> Result<()> {
         fn block(title: &str) -> Block {
             Block::default()
@@ -65,6 +72,18 @@ impl Tui {
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::LightCyan))
+        }
+
+        fn help_line<'a>(key: &'a str, desc: &'a str) -> Line<'a> {
+            Line::from(vec![
+                Span::styled(
+                    format!("  {:<15}", key),
+                    Style::default()
+                        .fg(Color::LightCyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(desc),
+            ])
         }
 
         self.terminal
@@ -77,6 +96,7 @@ impl Tui {
                             Constraint::Length(10),
                             Constraint::Min(20),
                             Constraint::Length(3),
+                            Constraint::Length(1),
                         ]
                         .as_ref(),
                     )
@@ -106,6 +126,52 @@ impl Tui {
                     chunks[2].x + ((input.visual_cursor()).max(scroll) - scroll) as u16 + 1,
                     chunks[2].y + 1,
                 );
+
+                // Help label.
+                f.render_widget(
+                    Paragraph::new("Help (?)")
+                        .style(Style::default().fg(Color::LightCyan))
+                        .alignment(Alignment::Right),
+                    chunks[3],
+                );
+
+                if show_help {
+                    // Show the help dialog.
+                    let layout = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints(
+                            [
+                                Constraint::Percentage((100 - HELP_PERCENT_Y) / 2),
+                                Constraint::Percentage(HELP_PERCENT_Y),
+                                Constraint::Percentage((100 - HELP_PERCENT_Y) / 2),
+                            ]
+                            .as_ref(),
+                        )
+                        .split(f.size());
+                    let chunk = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints(
+                            [
+                                Constraint::Percentage((100 - HELP_PERCENT_X) / 2),
+                                Constraint::Percentage(HELP_PERCENT_X),
+                                Constraint::Percentage((100 - HELP_PERCENT_X) / 2),
+                            ]
+                            .as_ref(),
+                        )
+                        .split(layout[1])[1];
+                    f.render_widget(Clear, chunk);
+                    f.render_widget(
+                        Paragraph::new(vec![
+                            help_line("<esc>", "Quit"),
+                            help_line("<up>", "Previous result"),
+                            help_line("<down>", "Next result"),
+                            help_line("<enter>", "Select result"),
+                            help_line("?", "Toggle help"),
+                        ])
+                        .block(block("Help")),
+                        chunk,
+                    );
+                }
             })
             .map(|_| ())
             .context("Failed to draw terminal")

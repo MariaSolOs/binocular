@@ -18,6 +18,7 @@ pub struct App {
     input: Input,
     results: Vec<RgItem>,
     state: ListState,
+    show_help: bool,
 }
 
 impl App {
@@ -27,6 +28,7 @@ impl App {
             input: Input::default(),
             results: Vec::new(),
             state: ListState::default(),
+            show_help: false,
         }
     }
 
@@ -41,6 +43,7 @@ impl App {
                 self.results.iter().map(RgItem::as_list_item).collect(),
                 &{ self.selected_item().map_or("", |item| item.context()) }.to_string(),
                 &mut self.state,
+                self.show_help,
             )
             .context("Failed to render application window")?;
 
@@ -83,6 +86,10 @@ impl App {
                                 .spawn()
                                 .context("Failed to open file in VS Code")?;
                             }
+                        }
+                        KeyCode::Char('?') => {
+                            // Toggle the help window.
+                            self.show_help = !self.show_help;
                         }
                         // Handle any other key event as search input.
                         _ => {
@@ -129,7 +136,7 @@ impl App {
                 let mut file = output
                     .next()
                     .context("first output line should be a file name")?;
-                let mut ctx = HashMap::with_capacity(8);
+                let mut ctx = HashMap::with_capacity(CTX_LINES as usize * 2);
                 let mut builder: Option<RgItemBuilder> = None;
                 let mut results = Vec::new();
                 for output_line in output {
@@ -194,9 +201,9 @@ impl App {
         Ok(())
     }
 
+    /// Sets the current search results and resets the list offset.
     fn set_results(&mut self, results: Vec<RgItem>) {
         self.results = results;
-        // Reset the stored list offset.
         self.state = ListState::default().with_selected(if self.results.is_empty() {
             None
         } else {
@@ -204,6 +211,7 @@ impl App {
         });
     }
 
+    /// Returns the currently selected [RgItem] (if any).
     fn selected_item(&self) -> Option<&RgItem> {
         if self.results.is_empty() {
             None
