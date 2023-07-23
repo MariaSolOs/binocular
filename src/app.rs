@@ -1,8 +1,8 @@
 use anyhow::{bail, Context, Result};
 use crossterm::event::{Event, EventStream, KeyCode};
-use futures::StreamExt;
 use ratatui::widgets::ListState;
 use std::{collections::HashMap, io::ErrorKind, process::Command};
+use tokio_stream::StreamExt;
 use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{
@@ -126,9 +126,9 @@ impl App {
         {
             Err(err) => {
                 if err.kind() == ErrorKind::NotFound {
-                    bail!("ripgrep is not installed")
+                    bail!("ripgrep is not installed");
                 } else {
-                    bail!("Failed to run ripgrep: {}", err)
+                    bail!("Failed to run ripgrep: {}", err);
                 }
             }
             Ok(output) => {

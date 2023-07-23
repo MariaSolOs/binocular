@@ -13,7 +13,7 @@ categories = ["command-line-utilities", "filesystem"]
 [dependencies]
 anyhow = "1.0.72"
 crossterm = { version = "0.26.1", features = ["event-stream"] }
-futures = "0.3.28"
 ratatui = "0.22.0"
-tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread", "process"] }
+tokio-stream = "0.1.14"
 tui-input = "0.7.1"
