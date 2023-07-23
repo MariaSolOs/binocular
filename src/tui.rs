@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Clear, List, ListItem, ListState, Paragraph},
     Terminal,
 };
-use std::io::Stdout;
+use std::io::{self, Stdout};
 use tui_input::Input;
 
 /// Percentage of the horizontal space occupied by the help window.
@@ -29,7 +29,7 @@ impl Tui {
         terminal::enable_raw_mode().context("Failed to enable raw mode")?;
 
         // Configure terminal properties.
-        let mut stdout = std::io::stdout();
+        let mut stdout = io::stdout();
         crossterm::execute!(stdout, terminal::EnterAlternateScreen)
             .context("Failed to enter alternate screen")?;
 
@@ -42,16 +42,14 @@ impl Tui {
     /// Shuts down the terminal user interface.
     /// Note that this function won't stop when encountering an error,
     /// instead it will print the error to `stderr` and continue.
-    pub fn shutdown(&mut self) {
+    pub fn shutdown() {
         // Disable raw mode.
         if let Err(err) = terminal::disable_raw_mode() {
             eprintln!("Failed to disable raw mode: {}", err);
         }
 
         // Restore terminal properties.
-        if let Err(err) =
-            crossterm::execute!(self.terminal.backend_mut(), terminal::LeaveAlternateScreen)
-        {
+        if let Err(err) = crossterm::execute!(io::stdout(), terminal::LeaveAlternateScreen) {
             eprintln!("Failed to leave alternate screen: {}", err);
         }
     }
