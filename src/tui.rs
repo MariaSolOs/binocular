@@ -11,11 +11,6 @@ use ratatui::{
 use std::io::{self, Stdout};
 use tui_input::Input;
 
-/// Percentage of the horizontal space occupied by the help window.
-const HELP_PERCENT_X: u16 = 20;
-/// Percentage of the vertical space occupied by the help window.
-const HELP_PERCENT_Y: u16 = 20;
-
 /// Wrapper around the terminal user interface.
 /// Responsible for its setup and shutdown.
 pub struct Tui {
@@ -139,9 +134,9 @@ impl Tui {
                         .direction(Direction::Vertical)
                         .constraints(
                             [
-                                Constraint::Percentage((100 - HELP_PERCENT_Y) / 2),
-                                Constraint::Percentage(HELP_PERCENT_Y),
-                                Constraint::Percentage((100 - HELP_PERCENT_Y) / 2),
+                                Constraint::Percentage(35),
+                                Constraint::Max(8),
+                                Constraint::Percentage(35),
                             ]
                             .as_ref(),
                         )
@@ -150,9 +145,9 @@ impl Tui {
                         .direction(Direction::Horizontal)
                         .constraints(
                             [
-                                Constraint::Percentage((100 - HELP_PERCENT_X) / 2),
-                                Constraint::Percentage(HELP_PERCENT_X),
-                                Constraint::Percentage((100 - HELP_PERCENT_X) / 2),
+                                Constraint::Percentage(40),
+                                Constraint::Min(40),
+                                Constraint::Percentage(40),
                             ]
                             .as_ref(),
                         )
