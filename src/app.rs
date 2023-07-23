@@ -1,16 +1,14 @@
 use anyhow::{bail, Context, Result};
-use crossterm::event::{self, Event, KeyCode};
+use crossterm::event::{Event, EventStream, KeyCode};
+use futures::StreamExt;
 use ratatui::widgets::ListState;
-use std::{collections::HashMap, io::ErrorKind, process::Command, time::Duration};
+use std::{collections::HashMap, io::ErrorKind, process::Command};
 use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{
     rg_item::{RgItem, RgItemBuilder, CTX_LINES},
     tui::Tui,
 };
-
-/// Event polling timeout in milliseconds.
-const TIMEOUT: u64 = 250;
 
 /// The application state. Abstraction over what's displayed
 /// in the TUI.
@@ -33,8 +31,8 @@ impl App {
     }
 
     /// Runs the application loop.
-    pub fn run(&mut self, tui: &mut Tui) -> Result<()> {
-        let timeout = Duration::from_millis(TIMEOUT);
+    pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
+        let mut reader = EventStream::new();
 
         loop {
             // Render the terminal UI.
@@ -47,13 +45,12 @@ impl App {
             )
             .context("Failed to render application window")?;
 
-            // Check if we received any user input.
-            // Note that only some actions are enabled when showing the help dialog.
-            if event::poll(timeout).context("Failed to poll next terminal event")? {
-                if let Event::Key(key) = event::read().context("Failed to read terminal event")? {
+            if let Some(event) = reader.next().await {
+                if let Event::Key(key) = event.context("Failed to read terminal event")? {
+                    // Note that only some actions are enabled when showing the help dialog.
                     match (key.code, self.show_help) {
                         // Exit the application.
-                        (KeyCode::Esc, _) => return Ok(()),
+                        (KeyCode::Esc, _) => break,
                         // Select the previous item from the results list.
                         (KeyCode::Up, false) => {
                             self.state.select(Some(self.state.selected().map_or(0, |i| {
@@ -101,8 +98,12 @@ impl App {
                         }
                     }
                 }
+            } else {
+                break;
             }
         }
+
+        Ok(())
     }
 
     // Executes `ripgrep` with the current search input.
