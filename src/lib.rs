@@ -2,8 +2,8 @@
 mod app;
 pub use app::App;
 
-/// List item representing a `ripgrep` result.
-mod rg_item;
+/// `Binocular` pickers.
+pub mod pickers;
 
 /// Terminal user interface.
 mod tui;

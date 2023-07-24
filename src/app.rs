@@ -1,16 +1,12 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent};
 use ratatui::widgets::ListState;
-use std::{collections::HashMap, io::ErrorKind};
-use tokio::{
-    process::Command,
-    sync::mpsc::{self, Receiver, Sender},
-};
+use tokio::sync::mpsc::{self, Sender};
 use tokio_stream::StreamExt;
 use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{
-    rg_item::{RgItem, RgItemBuilder, CTX_LINES},
+    pickers::{Picker, PickerItem},
     tui::Tui,
 };
 
@@ -19,39 +15,46 @@ const CHANNEL_CAPACITY: usize = 100;
 
 /// The application state. Abstraction over what's displayed
 /// in the TUI.
-pub struct App {
+pub struct App<I, P>
+where
+    I: PickerItem,
+    P: Picker<I>,
+{
+    picker: P,
     input: Input,
-    results: Vec<RgItem>,
+    results: Vec<I>,
     state: ListState,
     show_help: bool,
-    tx: Sender<Vec<RgItem>>,
-    rx: Receiver<Vec<RgItem>>,
 }
 
-impl App {
+impl<I, P> App<I, P>
+where
+    I: PickerItem,
+    P: Picker<I>,
+{
     /// Initializes a new application.
-    pub fn new() -> Self {
-        let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
+    pub fn new(picker: P) -> Self {
         Self {
+            picker,
             input: Input::default(),
             results: Vec::new(),
             state: ListState::default(),
             show_help: false,
-            tx,
-            rx,
         }
     }
 
     /// Runs the application loop.
     pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
         let mut reader = EventStream::new();
+        let (tx, mut rx) = mpsc::channel(CHANNEL_CAPACITY);
 
         loop {
             // Render the terminal UI.
             tui.render(
                 &self.input,
-                self.results.iter().map(RgItem::as_list_item).collect(),
-                &{ self.selected_item().map_or("", |item| item.context()) }.to_string(),
+                self.results.iter().map(PickerItem::as_list_item).collect(),
+                self.selected_item()
+                    .map_or(String::new(), |item| item.preview()),
                 &mut self.state,
                 self.show_help,
             )
@@ -65,10 +68,11 @@ impl App {
                             break;
                         }
 
-                        self.handle_key_event(key)?;
+                        self.handle_key_event(key, tx.clone()).context("Failed to handle key event")?;
                     }
                 }
-                Some(results) = self.rx.recv() => self.handle_results(results),
+                // Received something from the picker, update the results.
+                Some(results) = rx.recv() => self.handle_results(results),
                 else => break
             }
         }
@@ -76,7 +80,8 @@ impl App {
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key: KeyEvent) -> Result<()> {
+    /// Updates the UI based on the key press.
+    fn handle_key_event(&mut self, key: KeyEvent, tx: Sender<Vec<I>>) -> Result<()> {
         // Note that only some actions are enabled when showing the help dialog.
         match (key.code, self.show_help) {
             // Select the previous item from the results list.
@@ -100,17 +105,11 @@ impl App {
                 })));
             }
             (KeyCode::Enter, false) => {
-                // Open the selected item in VS Code.
+                // Handle the selection.
                 if let Some(item) = self.selected_item() {
-                    Command::new(if cfg!(windows) {
-                        "code-insiders.cmd"
-                    } else {
-                        "code-insiders"
-                    })
-                    .arg("--goto")
-                    .arg(format!("{}:{}", item.filename(), item.line_number()))
-                    .spawn()
-                    .context("Failed to open file in VS Code")?;
+                    self.picker
+                        .handle_selection(item)
+                        .context("Failed to process selected item")?;
                 }
             }
             (KeyCode::Char('?'), _) => {
@@ -121,19 +120,8 @@ impl App {
             (_, show_help) => {
                 if !show_help {
                     self.input.handle_event(&Event::Key(key));
-
-                    // Spawn a new ripgrep task.
-                    let input = self.input.value().to_owned();
-                    let tx = self.tx.clone();
-                    tokio::spawn(async move {
-                        let rg_items = execute_rg(&input)
-                            .await
-                            .context("Failed to execute ripgrep")?;
-
-                        tx.send(rg_items)
-                            .await
-                            .context("Failed to send ripgrep results")
-                    });
+                    self.picker
+                        .handle_input_change(self.input.value().to_owned(), tx);
                 }
             }
         }
@@ -142,7 +130,7 @@ impl App {
     }
 
     /// Sets the current search results and resets the list offset.
-    fn handle_results(&mut self, results: Vec<RgItem>) {
+    fn handle_results(&mut self, results: Vec<I>) {
         self.results = results;
         self.state = ListState::default().with_selected(if self.results.is_empty() {
             None
@@ -151,107 +139,12 @@ impl App {
         });
     }
 
-    /// Returns the currently selected [RgItem] (if any).
-    fn selected_item(&self) -> Option<&RgItem> {
+    /// Returns the currently selected item (if any).
+    fn selected_item(&self) -> Option<&I> {
         if self.results.is_empty() {
             None
         } else {
             Some(&self.results[self.state.selected().unwrap_or(0)])
-        }
-    }
-}
-
-// Executes `ripgrep` with the given search input.
-async fn execute_rg(input: &str) -> Result<Vec<RgItem>> {
-    // Easy case.
-    if input.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    match Command::new(if cfg!(windows) { "rg.exe" } else { "rg" })
-        .arg(input)
-        .arg("--color=never")
-        .arg("--heading")
-        .arg("--line-number")
-        .arg("--smart-case")
-        .arg("--no-context-separator")
-        .arg(format!("--context={}", CTX_LINES))
-        .output()
-        .await
-    {
-        Err(err) => {
-            if err.kind() == ErrorKind::NotFound {
-                bail!("ripgrep is not installed");
-            } else {
-                bail!("Failed to run ripgrep: {}", err);
-            }
-        }
-        Ok(output) => {
-            // Split the results.
-            let output = String::from_utf8_lossy(&output.stdout);
-            let mut output = output.split('\n');
-
-            // Parse each item, keeping track of the context lines around each match.
-            let mut file = output
-                .next()
-                .context("first output line should be a file name")?;
-            let mut ctx = HashMap::with_capacity(CTX_LINES as usize * 2);
-            let mut builder: Option<RgItemBuilder> = None;
-            let mut results = Vec::new();
-            for output_line in output {
-                if output_line.starts_with(|c: char| c.is_ascii_digit()) {
-                    match output_line
-                        .trim_start_matches(|c: char| c.is_ascii_digit())
-                        .chars()
-                        .next()
-                    {
-                        Some(c @ ('-' | ':')) => {
-                            let (line_number, line) = output_line
-                                .split_once(c)
-                                .context("output line should contain the matched character")?;
-                            let line_number = line_number
-                                .parse::<u16>()
-                                .context("output line should start with digits")?;
-
-                            // Add the line to the context.
-                            ctx.insert(line_number, line);
-
-                            if c == ':' {
-                                // We have a match.
-                                if let Some(builder) = builder {
-                                    // The current context is the post-context for the previous item
-                                    // (if any).
-                                    results.push(builder.add_post_context(&ctx).build());
-                                }
-
-                                // The current context is the pre-context for this item.
-                                builder = Some(
-                                    RgItem::builder(file, line_number, line).add_pre_context(&ctx),
-                                );
-                            }
-                        }
-                        // This is technically impossible because we're matching ripgrep's
-                        // format, but we'll handle it anyway.
-                        _ => bail!(
-                            "expected a context or a matching line but found: {}",
-                            output_line
-                        ),
-                    }
-                } else if !output_line.is_empty() {
-                    // Must be a line with the file name.
-                    file = output_line;
-                } else {
-                    // Changing files, so clear the context.
-                    ctx.clear();
-                }
-            }
-
-            // Add the last item.
-            if let Some(builder) = builder {
-                results.push(builder.add_post_context(&ctx).build());
-            }
-
-            Ok(results)
         }
     }
 }

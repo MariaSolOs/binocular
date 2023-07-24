@@ -54,7 +54,7 @@ impl Tui {
         &mut self,
         input: &Input,
         results: Vec<ListItem>,
-        preview: &str,
+        preview: String,
         state: &mut ListState,
         show_help: bool,
     ) -> Result<()> {
