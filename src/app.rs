@@ -50,15 +50,8 @@ where
 
         loop {
             // Render the terminal UI.
-            tui.render(
-                &self.input,
-                self.results.iter().map(PickerItem::as_list_item).collect(),
-                self.selected_item()
-                    .map_or(String::new(), |item| item.preview()),
-                &mut self.state,
-                self.show_help,
-            )
-            .context("Failed to render application window")?;
+            tui.render(&self.input, &self.results, &mut self.state, self.show_help)
+                .context("Failed to render application window")?;
 
             tokio::select! {
                 Some(event) = reader.next() => {
@@ -106,7 +99,7 @@ where
             }
             (KeyCode::Enter, false) => {
                 // Handle the selection.
-                if let Some(item) = self.selected_item() {
+                if let Some(item) = self.results.get(self.state.selected().unwrap_or(0)) {
                     self.picker
                         .handle_selection(item)
                         .context("Failed to process selected item")?;
@@ -137,14 +130,5 @@ where
         } else {
             Some(0)
         });
-    }
-
-    /// Returns the currently selected item (if any).
-    fn selected_item(&self) -> Option<&I> {
-        if self.results.is_empty() {
-            None
-        } else {
-            Some(&self.results[self.state.selected().unwrap_or(0)])
-        }
     }
 }

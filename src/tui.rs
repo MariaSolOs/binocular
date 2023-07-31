@@ -5,11 +5,13 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, ListState, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListState, Paragraph},
     Terminal,
 };
 use std::io::{self, Stdout};
 use tui_input::Input;
+
+use crate::pickers::PickerItem;
 
 /// Wrapper around the terminal user interface.
 /// Responsible for its setup and shutdown.
@@ -50,11 +52,10 @@ impl Tui {
     }
 
     /// Renders the terminal's widgets.
-    pub(crate) fn render(
+    pub(crate) fn render<I: PickerItem>(
         &mut self,
         input: &Input,
-        results: Vec<ListItem>,
-        preview: String,
+        results: &[I],
         state: &mut ListState,
         show_help: bool,
     ) -> Result<()> {
@@ -96,13 +97,23 @@ impl Tui {
                     .margin(1)
                     .split(f.size());
 
+                // Previewer's title.
+                let preview = results
+                    .get(state.selected().unwrap_or(0))
+                    .map_or(String::new(), |item| item.preview());
                 f.render_widget(Paragraph::new(preview).block(block("Preview")), chunks[0]);
 
+                // List of results.
                 f.render_stateful_widget(
-                    List::new(results)
-                        .block(block("Results"))
-                        .highlight_symbol(">> ")
-                        .highlight_style(Style::default().fg(Color::Yellow)),
+                    List::new(
+                        results
+                            .into_iter()
+                            .map(|result| result.as_list_item())
+                            .collect::<Vec<_>>(),
+                    )
+                    .block(block("Results"))
+                    .highlight_symbol(">> ")
+                    .highlight_style(Style::default().fg(Color::Yellow)),
                     chunks[1],
                     state,
                 );
