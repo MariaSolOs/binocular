@@ -108,6 +108,14 @@ impl GrepItemBuilder {
 pub struct GrepPicker;
 
 impl Picker<GrepItem> for GrepPicker {
+    fn name(&self) -> &'static str {
+        "Live Grep"
+    }
+
+    fn preview_title(&self) -> &'static str {
+        "Grep Preview"
+    }
+
     fn handle_input_change(&self, input: String, sender: Sender<Vec<GrepItem>>) {
         tokio::spawn(async move {
             let results = if input.is_empty() {

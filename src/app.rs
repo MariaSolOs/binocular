@@ -50,8 +50,15 @@ where
 
         loop {
             // Render the terminal UI.
-            tui.render(&self.input, &self.results, &mut self.state, self.show_help)
-                .context("Failed to render application window")?;
+            tui.render(
+                &self.input,
+                &self.results,
+                &mut self.state,
+                self.show_help,
+                self.picker.preview_title(),
+                self.picker.name(),
+            )
+            .context("Failed to render application window")?;
 
             tokio::select! {
                 Some(event) = reader.next() => {

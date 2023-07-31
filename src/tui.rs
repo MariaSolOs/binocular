@@ -58,10 +58,12 @@ impl Tui {
         results: &[I],
         state: &mut ListState,
         show_help: bool,
+        preview_title: &str,
+        input_title: &str,
     ) -> Result<()> {
         fn block(title: &str) -> Block {
             Block::default()
-                .title(title)
+                .title(format!(" {} ", title))
                 .title_alignment(Alignment::Center)
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
@@ -101,7 +103,10 @@ impl Tui {
                 let preview = results
                     .get(state.selected().unwrap_or(0))
                     .map_or(String::new(), |item| item.preview());
-                f.render_widget(Paragraph::new(preview).block(block("Preview")), chunks[0]);
+                f.render_widget(
+                    Paragraph::new(preview).block(block(preview_title)),
+                    chunks[0],
+                );
 
                 // List of results.
                 f.render_stateful_widget(
@@ -119,7 +124,7 @@ impl Tui {
                 );
 
                 f.render_widget(
-                    Paragraph::new(input.value()).block(block("Input")),
+                    Paragraph::new(input.value()).block(block(input_title)),
                     chunks[2],
                 );
 
@@ -146,7 +151,7 @@ impl Tui {
                         .constraints(
                             [
                                 Constraint::Percentage(35),
-                                Constraint::Max(8),
+                                Constraint::Max(7),
                                 Constraint::Percentage(35),
                             ]
                             .as_ref(),

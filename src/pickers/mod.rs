@@ -16,6 +16,12 @@ pub trait PickerItem {
 
 /// A Binocular picker.
 pub trait Picker<I: PickerItem> {
+    /// Returns the picker's name.
+    fn name(&self) -> &'static str;
+
+    /// Returns the picker's preview title.
+    fn preview_title(&self) -> &'static str;
+
     /// Handles changes in the search input field.
     /// `sender` can be used to communicate back with the application.
     fn handle_input_change(&self, input: String, sender: Sender<Vec<I>>);
