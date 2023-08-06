@@ -44,7 +44,7 @@ where
     }
 
     /// Runs the application loop.
-    pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
+    pub async fn run(&mut self, tui: &mut Tui<'_>) -> Result<()> {
         let mut reader = EventStream::new();
         let (tx, mut rx) = mpsc::channel(CHANNEL_CAPACITY);
 

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::panic;
 
-use binocular::{pickers::GrepPicker, App, Tui};
+use binocular::{pickers::GrepPicker, App, Config, Tui};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -13,7 +13,8 @@ async fn main() -> Result<()> {
     }));
 
     // Initialize the application.
-    let mut tui = Tui::setup().context("Failed to setup terminal")?;
+    let config = Config::load().context("Failed to load binocular configuration")?;
+    let mut tui = Tui::setup(&config).context("Failed to setup terminal")?;
     let mut app = App::new(GrepPicker);
 
     // Application loop.

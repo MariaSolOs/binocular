@@ -2,13 +2,15 @@ use anyhow::Result;
 use ratatui::widgets::ListItem;
 use tokio::sync::mpsc::Sender;
 
-mod grep;
+use crate::Config;
 pub use grep::{GrepItem, GrepPicker};
+
+mod grep;
 
 /// An item returned by a Binocular picker.
 pub trait PickerItem {
     /// Returns a `ratatui` list item representing the match.
-    fn as_list_item(&self) -> ListItem;
+    fn as_list_item(&self, config: &Config) -> ListItem;
 
     /// Returns a preview of the match to be displayed in the TUI.
     fn preview(&self) -> String;

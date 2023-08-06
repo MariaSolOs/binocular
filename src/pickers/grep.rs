@@ -1,13 +1,16 @@
 use anyhow::{bail, Context, Result};
 use ratatui::{
-    style::{Color, Style},
+    style::Style,
     text::{Line, Span},
     widgets::ListItem,
 };
 use std::{collections::HashMap, io::ErrorKind, iter};
 use tokio::{process::Command, sync::mpsc::Sender};
 
-use super::{Picker, PickerItem};
+use crate::{
+    pickers::{Picker, PickerItem},
+    Config,
+};
 
 /// Number of context lines kept before and after a matched line.
 const CTX_LINES: u16 = 4;
@@ -38,13 +41,11 @@ impl GrepItem {
 }
 
 impl PickerItem for GrepItem {
-    fn as_list_item(&self) -> ListItem {
+    fn as_list_item(&self, config: &Config) -> ListItem {
+        let file_style = Style::default().fg(config.filepath_color());
         ListItem::new(vec![Line::from(vec![
-            Span::styled(&self.filename, Style::default().fg(Color::LightMagenta)),
-            Span::styled(
-                format!(" [{}]", self.line_number),
-                Style::default().fg(Color::LightMagenta),
-            ),
+            Span::styled(&self.filename, file_style),
+            Span::styled(format!(" [{}] ", self.line_number), file_style),
             Span::raw(&self.matched_line),
         ])])
     }

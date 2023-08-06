@@ -3,7 +3,7 @@ use crossterm::terminal;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, List, ListState, Paragraph},
     Terminal,
@@ -11,17 +11,18 @@ use ratatui::{
 use std::io::{self, Stdout};
 use tui_input::Input;
 
-use crate::pickers::PickerItem;
+use crate::{pickers::PickerItem, Config};
 
 /// Wrapper around the terminal user interface.
 /// Responsible for its setup and shutdown.
-pub struct Tui {
+pub struct Tui<'a> {
+    config: &'a Config,
     terminal: Terminal<CrosstermBackend<Stdout>>,
 }
 
-impl Tui {
+impl<'a> Tui<'a> {
     /// Sets up the terminal user interface.
-    pub fn setup() -> Result<Self> {
+    pub fn setup(config: &'a Config) -> Result<Self> {
         // Enable raw mode.
         terminal::enable_raw_mode().context("Failed to enable raw mode")?;
 
@@ -32,7 +33,7 @@ impl Tui {
 
         // Initialize the terminal.
         Terminal::new(CrosstermBackend::new(stdout))
-            .map(|terminal| Self { terminal })
+            .map(|terminal| Self { terminal, config })
             .context("Failed to create terminal")
     }
 
@@ -61,26 +62,26 @@ impl Tui {
         preview_title: &str,
         input_title: &str,
     ) -> Result<()> {
-        fn block(title: &str) -> Block {
+        let block = |title| {
             Block::default()
                 .title(format!(" {} ", title))
                 .title_alignment(Alignment::Center)
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded)
-                .border_style(Style::default().fg(Color::LightCyan))
-        }
+                .border_style(Style::default().fg(self.config.base_color()))
+        };
 
-        fn help_line<'a>(key: &'a str, desc: &'a str) -> Line<'a> {
+        let help_line = |key, desc| {
             Line::from(vec![
                 Span::styled(
                     format!("  {:<15}", key),
                     Style::default()
-                        .fg(Color::LightCyan)
+                        .fg(self.config.base_color())
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(desc),
             ])
-        }
+        };
 
         self.terminal
             .draw(|f| {
@@ -113,12 +114,12 @@ impl Tui {
                     List::new(
                         results
                             .into_iter()
-                            .map(|result| result.as_list_item())
+                            .map(|result| result.as_list_item(self.config))
                             .collect::<Vec<_>>(),
                     )
                     .block(block("Results"))
                     .highlight_symbol(">> ")
-                    .highlight_style(Style::default().fg(Color::Yellow)),
+                    .highlight_style(Style::default().fg(self.config.selection_color())),
                     chunks[1],
                     state,
                 );
@@ -139,7 +140,7 @@ impl Tui {
                 // Help label.
                 f.render_widget(
                     Paragraph::new("Help (?)")
-                        .style(Style::default().fg(Color::LightCyan))
+                        .style(Style::default().fg(self.config.base_color()))
                         .alignment(Alignment::Right),
                     chunks[3],
                 );
